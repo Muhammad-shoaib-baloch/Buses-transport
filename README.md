@@ -1,64 +1,55 @@
-# Buses Transport UAE — website + admin dashboard
+# Buses Transport UAE — Laravel + MySQL website with admin dashboard
 
-Next.js 16 (App Router) · React 19 · Prisma 6 · SQLite (swap to MySQL/PostgreSQL for production) · no UI framework — the design system lives in `src/app/site.css` (public site) and `src/app/admin.css` + `admin-extra.css` (dashboard).
+PHP 8.2+ · Laravel 12 · MySQL/MariaDB · plain CSS/JS (no Node needed). Runs on ordinary cPanel / Hostinger shared hosting.
 
-Design ported from the prototype at busuae.mrshoaib.com; content (services, 17 vehicles, FAQs, contact details, coverage) from busestransport.com.
+Design from the busuae.mrshoaib.com prototype; content (9 services, 17 vehicles, FAQs, contact details, coverage) from busestransport.com.
 
-## Run it locally
+## Deploy to cPanel or Hostinger (no SSH needed)
 
-```bash
-npm install
-cp .env.example .env        # then fill AUTH_SECRET and ADMIN_PASSWORD
-npm run db:push             # create the database tables
-npm run db:seed             # load the real content + first admin user
-npm run dev                 # http://localhost:3000  ·  dashboard: /admin
+1. **Build the package** on this PC:
+   ```
+   powershell -ExecutionPolicy Bypass -File scripts\build-cpanel-package.ps1
+   ```
+   → `build\busestransport-cpanel.zip` with two folders: `busestransport\` (the app, with a fresh `.env`) and `public_html\` (the public files).
+2. **Hosting → PHP version**: choose **PHP 8.2 or 8.3** (cPanel: *Select PHP Version* / *MultiPHP Manager*; Hostinger: *Advanced → PHP Configuration*). Extensions: `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `tokenizer`, `xml`, `ctype`, `curl`, `gd` (gd resizes uploaded photos).
+3. **Create a MySQL database** + user (cPanel: *MySQL Databases*, give the user ALL PRIVILEGES; Hostinger: *Databases → MySQL*).
+4. **Back up the old site** in `public_html` (the old WordPress install) and move its files out of `public_html`.
+5. **Upload the zip to the folder that contains `public_html`** (cPanel: your home folder; Hostinger: `domains/busestransport.com/`) and **Extract** it there. You get `busestransport/` next to `public_html/`.
+6. **Edit `busestransport/.env`** in File Manager: `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (and `DB_HOST` if your host says so), and `APP_URL=https://busestransport.com`.
+7. **Open `https://busestransport.com/install?key=SETUP_KEY`** (the `SETUP_KEY` value from `.env`) → *Install now*. This creates the tables and loads all the content. The installer locks itself afterwards.
+8. **Sign in** at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`, change the password under *My account*, then set *Settings → Branding → Live website URL*.
+
+Folders that must be writable: `busestransport/storage`, `busestransport/bootstrap/cache`, `public_html/uploads` (755 is fine on most hosts).
+
+## Run locally (XAMPP)
+
+```
+composer install
+copy .env.example .env      # set DB_* to your local MySQL, ADMIN_PASSWORD, SETUP_KEY
+php artisan key:generate
+php artisan migrate --seed
+php -d extension=gd -S 127.0.0.1:8000 -t public dev-server.php
 ```
 
-The first admin account is `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`. Change the password after the first sign-in (Dashboard → My account).
-
-## What the dashboard manages
+## What the dashboard manages (`/admin`)
 
 | Area | Where |
 |---|---|
-| Quote requests from every form (status, notes, WhatsApp reply, CSV export) | Quote requests |
+| Quote requests from every form — status, notes, WhatsApp reply, CSV export | Quote requests |
 | Services — cards, pages, steps, included list, vehicles, FAQs, SEO | Services |
-| Fleet — photos (gallery), capacity, driver option, categories, homepage slider, SEO | Fleet |
+| Fleet — photo gallery, capacity, driver option, categories, homepage slider, SEO | Fleet |
 | Blog — markdown editor with preview, cover image, tags, drafts, scheduled dates, SEO | Blog posts |
 | Extra pages (Privacy Policy, Terms…) with footer links | Pages |
-| FAQs, testimonials, emirates/airports/areas, map points, popular routes & ticker | FAQs · Testimonials · Coverage & routes |
-| Uploads (auto-resized, stored in `UPLOAD_DIR`, served at `/media/…`) | Media library |
-| Logo, favicon, name, footer, contact numbers, WhatsApp, social links, every homepage text & section switch, About page, default + per-page meta tags, Google/Bing verification, robots, GTM / GA4 / Meta Pixel, custom head/body code, email alerts (SMTP), brand colours, form messages | Site settings |
+| FAQs, testimonials, emirates/airports/areas, map points, routes & ticker | FAQs · Testimonials · Coverage |
+| Uploads (auto-resized to 2400px, stored in `public/uploads`) | Media library |
+| Logo, favicon, name, footer, phones, WhatsApp, emails, social links, every homepage text & section switch, About page, default + per-page meta tags, Google/Bing verification, robots, GTM / GA4 / Meta Pixel, custom head/body code, email alerts (SMTP), brand colours, form messages | Site settings |
 | Admin & editor accounts | Users |
 
-## SEO built in
+## SEO
 
-Per-page titles/descriptions/keywords/OG images, canonical URLs, dynamic `sitemap.xml` and `robots.txt`, JSON-LD (LocalBusiness, Service, FAQPage, BlogPosting, BreadcrumbList), and 301 redirects from the old WordPress URLs (`/airport-transfer/` → `/services/airport-transfer`, `/our-vehicles/` → `/fleet`, `/about-us/`, `/contact-us/`).
+Per-page meta title/description/keywords/OG image, canonical URLs, `sitemap.xml`, `robots.txt`, JSON-LD (LocalBusiness, Service, FAQPage, BlogPosting, BreadcrumbList) and 301 redirects from the old WordPress URLs (`/airport-transfer/` → `/services/airport-transfer`, `/our-vehicles/` → `/fleet`, `/about-us/`, `/contact-us/`).
 
-## Deploying
+## Notes
 
-This is a Node.js app (it needs a server that runs `node`, not plain PHP hosting).
-
-```bash
-npm ci
-npx prisma db push          # first deploy only (creates tables)
-npm run db:seed             # first deploy only
-npm run build
-npm start                   # listens on port 3000 (set PORT to change)
-```
-
-Keep these between deploys: the database file (`prisma/dev.db` for SQLite) and the `UPLOAD_DIR` folder. Set `SITE_URL` (and Settings → Branding → Live website URL) to the real domain.
-
-- **VPS / Node hosting with a persistent disk** (Hostinger VPS, DigitalOcean, cPanel “Setup Node.js App”): works as-is with SQLite. Run it with `pm2 start npm --name busestransport -- start` behind Nginx/Apache.
-- **Serverless (Vercel etc.)**: switch to a hosted database (change `provider` in `prisma/schema.prisma` to `mysql` or `postgresql` and set `DATABASE_URL`) and note that local uploads do not persist there.
-
-## Scripts
-
-| Command | Does |
-|---|---|
-| `npm run dev` | development server |
-| `npm run build` / `npm start` | production build / server |
-| `npm run db:push` | sync the Prisma schema to the database |
-| `npm run db:seed` | load content (safe to re-run; never touches quote requests) |
-| `npm run db:reset` | wipe and re-seed the database |
-| `npm run db:studio` | browse the database |
-| `npm run admin:password -- you@example.com "New password"` | set a dashboard password (creates the admin if missing) |
+- `php artisan db:seed` resets services, vehicles and coverage to the original content — run it only on a fresh install.
+- Uploaded files live in `public/uploads` (`public_html/uploads` on the host) — include it in backups together with the database.
