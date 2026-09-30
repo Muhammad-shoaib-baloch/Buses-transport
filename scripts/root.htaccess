@@ -1,0 +1,12 @@
+# Buses Transport UAE — only needed when the package is extracted INSIDE public_html
+# (public_html/busestransport + public_html/public_html). Every request is served from
+# the inner public_html folder, so the app folder and stray files stay private.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^busestransport(/|$) - [F,L]
+    RewriteRule (^|/)\.(ht|env) - [F,L]
+    # SSL certificate checks place files in this public_html/.well-known
+    RewriteRule ^\.well-known/ - [L]
+    RewriteCond %{REQUEST_URI} !^/public_html/
+    RewriteRule ^(.*)$ public_html/$1 [L]
+</IfModule>

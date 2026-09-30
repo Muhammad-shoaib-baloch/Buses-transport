@@ -30,6 +30,8 @@ Design from the busuae.mrshoaib.com prototype; content (9 services, 17 vehicles,
 7. **Edit `busestransport/.env`** in File Manager: set `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_HOST` if your host says so.
 8. **Sign in** at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`, then change the password under *My account*.
 
+**Extracted inside `public_html` instead?** This happens on Hostinger, whose domain folder carries a `DO_NOT_UPLOAD_HERE` marker. The result is `public_html/busestransport/` + `public_html/public_html/`, and that layout works too. Put [`scripts/root.htaccess`](scripts/root.htaccess) into the outer `public_html` as `.htaccess` and delete the host's `default.php`. Every request is then served from the inner folder, while the app folder, `.env` and any stray `.sql` stay unreachable. This was tested under Apache.
+
 `/install?key=SETUP_KEY` is an alternative to step 4: it creates the tables and content itself. It locks itself as soon as the database already has an admin, so after an `.sql` import it does nothing.
 
 ### Temporary domain first, live later
