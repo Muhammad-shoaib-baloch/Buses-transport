@@ -54,6 +54,10 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Search engines may index the site only on this domain; any other
+    // domain (temporary / staging) gets noindex. Empty = no restriction.
+    'live_url' => env('LIVE_URL', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

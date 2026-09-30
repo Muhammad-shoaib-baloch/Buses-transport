@@ -6,6 +6,7 @@ use App\Models\Page;
 use App\Models\Post;
 use App\Models\Service;
 use App\Models\Vehicle;
+use App\Support\Seo;
 use App\Support\Settings;
 
 class SeoController extends Controller
@@ -46,7 +47,7 @@ class SeoController extends Controller
     public function robots()
     {
         $base = Settings::siteUrl();
-        $txt = site('seo.robotsIndex')
+        $txt = Seo::indexable()
             ? "User-Agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nHost: {$base}\nSitemap: {$base}/sitemap.xml\n"
             : "User-Agent: *\nDisallow: /\n";
 

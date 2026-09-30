@@ -5,17 +5,38 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * One-time web installer for shared hosting without SSH:
  *   https://yoursite.com/install?key=SETUP_KEY  → creates the tables and loads the content.
- * Locked after the first successful run (storage/app/installed.lock).
+ * Locked after the first successful run (storage/app/installed.lock), or as soon
+ * as it sees a database that was imported from the .sql file.
  */
 class InstallController extends Controller
 {
     private function lockFile(): string
     {
         return storage_path('app/installed.lock');
+    }
+
+    /** Locked, or the database was imported from the .sql file (it already has an admin). */
+    private function installed(): bool
+    {
+        if (is_file($this->lockFile())) {
+            return true;
+        }
+        try {
+            if (Schema::hasTable('users') && DB::table('users')->exists()) {
+                @file_put_contents($this->lockFile(), now()->toIso8601String());
+
+                return true;
+            }
+        } catch (\Throwable) {
+            // no database connection yet — show() explains it
+        }
+
+        return false;
     }
 
     private function keyOk(Request $r): bool
@@ -39,7 +60,7 @@ class InstallController extends Controller
 
     public function show(Request $r)
     {
-        if (is_file($this->lockFile())) {
+        if ($this->installed()) {
             return $this->page('Already installed', '<p>This website is installed. The installer is locked.</p><p><a class="b" href="/admin/login">Go to the dashboard</a></p>');
         }
         if (! $this->keyOk($r)) {
@@ -63,7 +84,7 @@ class InstallController extends Controller
 
     public function run(Request $r)
     {
-        if (is_file($this->lockFile()) || ! $this->keyOk($r)) {
+        if ($this->installed() || ! $this->keyOk($r)) {
             return redirect('/install');
         }
         @set_time_limit(300);

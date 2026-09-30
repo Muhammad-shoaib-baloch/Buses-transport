@@ -14,6 +14,21 @@ class Seo
         return Settings::siteUrl().(str_starts_with($u, '/') ? '' : '/').$u;
     }
 
+    /** Indexing is on in Settings and the request is on the live domain (LIVE_URL). */
+    public static function indexable(): bool
+    {
+        if (! site('seo.robotsIndex')) {
+            return false;
+        }
+        $live = parse_url((string) config('app.live_url'), PHP_URL_HOST);
+        if (! $live) {
+            return true;
+        }
+        $bare = fn (string $h) => preg_replace('/^www\./', '', strtolower($h));
+
+        return $bare($live) === $bare(request()->getHost());
+    }
+
     /**
      * Build the meta tags for a page. Explicit values win, then the
      * per-page overrides from Settings → Page meta tags, then defaults.
@@ -36,7 +51,7 @@ class Seo
             'canonical' => Settings::siteUrl().($in['path'] === '/' ? '/' : $in['path']),
             'ogImage' => $og ? self::absolute($og) : '',
             'type' => $in['type'] ?? 'website',
-            'noindex' => ! empty($in['noindex']) || ! $s['robotsIndex'],
+            'noindex' => ! empty($in['noindex']) || ! self::indexable(),
             'publishedTime' => $in['publishedTime'] ?? null,
         ];
     }
